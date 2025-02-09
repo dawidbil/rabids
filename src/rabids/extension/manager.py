@@ -1,13 +1,13 @@
-from typing import Dict, Type
 import importlib
 import inspect
 import os
 from pathlib import Path
+from typing import Any
 
 
 class ExtensionManager:
-    def __init__(self):
-        self.extensions: Dict[str, Any] = {}
+    def __init__(self) -> None:
+        self.extensions: dict[str, Any] = {}
         self.extension_dir = Path(__file__).parent.parent.parent / 'extensions'
 
     async def load_extensions(self) -> None:
@@ -20,7 +20,7 @@ class ExtensionManager:
             if extension_path.is_dir() and (extension_path / 'extension.py').exists():
                 try:
                     module = importlib.import_module(f'extensions.{item}.extension')
-                    for name, obj in inspect.getmembers(module):
+                    for _, obj in inspect.getmembers(module):
                         if inspect.isclass(obj) and hasattr(obj, 'initialize'):
                             extension = obj()
                             await extension.initialize()
