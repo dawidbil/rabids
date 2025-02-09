@@ -18,9 +18,9 @@ A modular AI agent system that allows different extensions to communicate with a
     ├── src/
     │   └── rabids/
     │       ├── llm/            # LLM provider interface and implementations
-    │       ├── extension/      # Extension management system
     │       └── server.py       # Core server implementation
-    └── extensions/             # Built-in extensions
+    ├── extensions/             # Standalone extension scripts
+    └── ...
 
 ## Installation
 
@@ -30,7 +30,6 @@ A modular AI agent system that allows different extensions to communicate with a
 git clone https://github.com/dawidbil/rabids.git
 cd rabids
 ```
-
 
 2. Create and activate a virtual environment:
 
