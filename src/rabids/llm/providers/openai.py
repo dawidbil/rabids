@@ -5,16 +5,15 @@ from ..base import LLMProvider
 
 
 class OpenAIProvider(LLMProvider):
-    """OpenAI API provider implementation."""
-
+    # Models supported by this provider implementation
     SUPPORTED_MODELS = ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo-preview', 'gpt-3.5-turbo-16k']
 
     def __init__(self) -> None:
         self.client: AsyncOpenAI | None = None
 
     async def initialize(self) -> None:
-        """Initialize the OpenAI client."""
-        self.client = AsyncOpenAI()  # Uses OPENAI_API_KEY environment variable
+        # Uses environment variable to avoid hardcoding credentials
+        self.client = AsyncOpenAI()
 
     async def generate(
         self,
@@ -24,7 +23,6 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.7,
         max_tokens: int = 1000,
     ) -> str:
-        """Generate text using OpenAI's API."""
         if not self.client:
             raise RuntimeError('OpenAI client not initialized')
 

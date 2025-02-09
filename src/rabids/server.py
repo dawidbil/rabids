@@ -8,13 +8,13 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from .llm.base import LLMProvider
-from .llm.providers.openai import OpenAIProvider  # We'll need to implement this
+from .llm.providers.openai import OpenAIProvider
 
 
 class CompletionRequest(BaseModel):
     prompt: str
     model: str = Field(default='gpt-3.5-turbo')
-    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)  # OpenAI API limits
     max_tokens: int = Field(default=1000, gt=0)
 
 
@@ -33,10 +33,8 @@ class Server:
         )
 
     async def startup(self) -> None:
-        """Initialize LLM providers on server startup."""
-        # Load environment variables from .env file
         env_path = Path(__file__).parent.parent.parent / '.env'
-        load_dotenv(env_path)
+        load_dotenv(env_path)  # Load credentials from .env
 
         for provider in self.llm_providers.values():
             await provider.initialize()
