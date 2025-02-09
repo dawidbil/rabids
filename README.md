@@ -24,17 +24,24 @@ A modular AI agent system that allows different extensions to communicate with a
 
 1. Clone the repository:
 
-    git clone https://github.com/dawidbil/rabids.git
-    cd rabids
+```bash
+git clone https://github.com/dawidbil/rabids.git
+cd rabids
+```
+
 
 2. Create and activate a virtual environment:
 
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
 
 3. Install the package:
 
-    uv pip install -e .
+```bash
+uv pip install -e .
+```
 
 ## Development
 
