@@ -1,12 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Any
 
 
 class LLMProvider(ABC):
     """Base class for LLM providers."""
 
     @abstractmethod
-    async def generate(self, prompt: str, **kwargs: dict[str, Any]) -> str:
+    async def generate(
+        self,
+        prompt: str,
+        *,
+        model: str = 'gpt-3.5-turbo',
+        temperature: float = 0.7,
+        max_tokens: int = 1000,
+    ) -> str:
         """Generate text from the LLM."""
         pass
 
