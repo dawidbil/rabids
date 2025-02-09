@@ -2,6 +2,8 @@
 
 A modular AI agent system that allows different extensions to communicate with a central core application through a REST API.
 
+> **Note**: This project is primarily developed using Large Language Models (LLMs), showcasing the potential of AI-assisted development.
+
 ## Features
 
 - Central server that manages communication between extensions
