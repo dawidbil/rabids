@@ -7,6 +7,8 @@ dependencies = [
     "starlette",
     "uvicorn",
     "pydantic",
+    "openai",
+    "python-dotenv",
 ]
 
 [build-system]
