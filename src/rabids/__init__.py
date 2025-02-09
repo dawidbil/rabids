@@ -1,8 +1,9 @@
 import uvicorn
+
 from .server import Server
 
 
-def main():
+def main() -> None:
     server = Server()
     uvicorn.run(server.app, host='127.0.0.1', port=8000)
 
