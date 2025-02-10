@@ -22,7 +22,7 @@ A modular AI agent system that allows different extensions to communicate with a
     ├── extensions/             # Standalone extension scripts
     └── ...
 
-## Installation
+## Installation & Configuration
 
 1. Clone the repository:
 
@@ -44,13 +44,23 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-4. Set up OpenAI credentials:
-   - Get your API key from https://platform.openai.com/
-   - Create a `.env` file in the project root:
-     ```
-     OPENAI_API_KEY=your-api-key-here
-     LOG_LEVEL=INFO  # Optional: DEBUG, INFO, WARNING, ERROR, or CRITICAL
-     ```
+4. Configure environment variables:
+   - Create a `.env` file in the project root with the following variables:
+
+   | Variable | Description | Required | Default |
+   |----------|-------------|----------|---------|
+   | `ANTHROPIC_API_KEY` | API key for Anthropic's Claude | Yes | - |
+   | `OPENAI_API_KEY` | API key for OpenAI's GPT models | Yes | - |
+   | `ALLOWED_API_KEYS` | Comma-separated list of valid API keys for authentication | Yes | - |
+   | `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) | No | `INFO` |
+
+   Example `.env` file:
+   ```
+   ANTHROPIC_API_KEY=your-anthropic-key-here
+   OPENAI_API_KEY=your-openai-key-here
+   ALLOWED_API_KEYS=your-api-key-here
+   LOG_LEVEL=INFO
+   ```
 
 ## Running the CLI Example
 
@@ -90,3 +100,45 @@ Install development dependencies:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Configuration
+
+The following environment variables are used to configure the application:
+
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `OPENAI_API_KEY` | API key for OpenAI's GPT models | Yes | - |
+| `ALLOWED_API_KEYS` | Comma-separated list of valid API keys for authentication | Yes | - |
+| `LOG_LEVEL` | Logging level | No | `INFO` |
+
+
+## Authentication
+
+The API is protected by API key authentication. To use the API:
+
+1. Generate a new API key using the provided script:
+
+```bash
+./src/scripts/generate_api_key.py
+```
+
+2. Add the generated key to your environment:
+
+```bash
+export ALLOWED_API_KEYS='your-generated-key'
+# Or append to existing keys:
+export ALLOWED_API_KEYS='existing-key1,existing-key2,your-generated-key'
+```
+
+3. Include the API key in your requests using the `X-API-Key` header:
+
+```bash
+curl -X POST http://localhost:8000/completion \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-generated-key" \
+  -d '{
+    "prompt": "Hello!",
+    "model": "gpt-3.5-turbo",
+    "temperature": 0.7
+  }'
+```
