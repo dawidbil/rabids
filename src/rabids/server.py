@@ -1,25 +1,49 @@
+import asyncio
 import logging
 import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from starlette.types import ASGIApp
 
-from .llm.base import LLMProvider
 from .llm.providers.openai import OpenAIProvider
 from .log_config import load_api_keys, setup_logging
 
 
 class CompletionRequest(BaseModel):
     prompt: str
-    model: str = Field(default='gpt-3.5-turbo')
+    model: str = Field(default='gpt-3.5-turbo', validate_default=True)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)  # OpenAI API limits
     max_tokens: int = Field(default=1000, gt=0)
+
+    @field_validator('model')
+    @classmethod
+    def validate_model(cls, v: str) -> str:
+        if v not in OpenAIProvider.SUPPORTED_MODELS:
+            raise ValueError(f'Unsupported model: {v}')
+        return v
+
+
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Handle HTTP exceptions by returning JSON responses."""
+    return JSONResponse(
+        {'detail': exc.detail},
+        status_code=exc.status_code,
+    )
+
+
+@asynccontextmanager
+async def lifespan(app: ASGIApp) -> AsyncGenerator[None, None]:
+    """Handle server lifespan events."""
+    yield
 
 
 class Server:
@@ -31,24 +55,31 @@ class Server:
         setup_logging()
         self.logger = logging.getLogger('rabids.server')
 
-        self.llm_providers: dict[str, LLMProvider] = {
-            'openai': OpenAIProvider(),
+        self.api_keys = load_api_keys()
+        self.llm_provider = OpenAIProvider()
+
+        exception_handlers = {
+            HTTPException: http_exception_handler,
+            Exception: lambda r, e: http_exception_handler(
+                r, HTTPException(status_code=500, detail=str(e))
+            ),
         }
 
         self.app = Starlette(
+            debug=True,
             routes=[
                 Route('/', self.home, methods=['GET']),
                 Route('/completion', self.get_completion, methods=['POST']),
             ],
-            on_startup=[self.startup],
+            exception_handlers=exception_handlers,
+            lifespan=lifespan,
         )
+        # Initialize provider immediately since we're not using startup event
+        asyncio.create_task(self.startup())
 
     async def startup(self) -> None:
         self.logger.info('Starting Rabids server')
-
-        for provider_name, provider in self.llm_providers.items():
-            self.logger.info(f'Initializing provider: {provider_name}')
-            await provider.initialize()
+        await self.llm_provider.initialize()
 
     async def home(self, request: Request) -> JSONResponse:
         return JSONResponse({'status': 'running'})
@@ -58,8 +89,7 @@ class Server:
         if not x_api_key:
             raise HTTPException(status_code=401, detail='API key is required')
 
-        allowed_keys = load_api_keys()
-        if x_api_key not in allowed_keys:
+        if x_api_key not in self.api_keys:
             raise HTTPException(status_code=403, detail='Invalid API key')
 
     async def get_completion(self, request: Request) -> JSONResponse:
@@ -78,24 +108,7 @@ class Server:
                 f'temperature={completion_request.temperature} request_id={request_id}'
             )
 
-            provider_name = (
-                'openai'
-                if completion_request.model in OpenAIProvider.SUPPORTED_MODELS
-                else 'unknown'
-            )
-
-            provider = self.llm_providers.get(provider_name)
-            if not provider:
-                logger.warning(
-                    f'Unsupported model provider requested: {provider_name}',
-                    extra={'request_id': request_id},
-                )
-                return JSONResponse(
-                    {'error': f'Unsupported model provider: {provider_name}'},
-                    status_code=400,
-                )
-
-            response = await provider.generate(
+            response = await self.llm_provider.generate(
                 prompt=completion_request.prompt,
                 model=completion_request.model,
                 temperature=completion_request.temperature,
@@ -109,10 +122,7 @@ class Server:
 
         except ValueError as e:
             logger.warning(f'Invalid request data: {str(e)} request_id={request_id}')
-            return JSONResponse({'error': str(e)}, status_code=400)
+            raise HTTPException(status_code=400, detail=str(e)) from e
         except Exception as e:
             logger.error(f'Internal server error: {str(e)} request_id={request_id}')
-            return JSONResponse(
-                {'error': f'Internal server error: {str(e)}'},
-                status_code=500,
-            )
+            raise HTTPException(status_code=500, detail=f'Internal server error: {str(e)}') from e
