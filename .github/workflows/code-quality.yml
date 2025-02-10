@@ -43,3 +43,7 @@ jobs:
       - name: Run mypy type checking
         run: |
           mypy src 
+      
+      - name: Run tests
+        run: |
+          pytest tests/ 
