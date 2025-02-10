@@ -1,3 +1,5 @@
+import logging
+import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -9,6 +11,7 @@ from starlette.routing import Route
 
 from .llm.base import LLMProvider
 from .llm.providers.openai import OpenAIProvider
+from .log_config import setup_logging
 
 
 class CompletionRequest(BaseModel):
@@ -20,6 +23,13 @@ class CompletionRequest(BaseModel):
 
 class Server:
     def __init__(self) -> None:
+        # Load env variables first
+        env_path = Path(__file__).parent.parent.parent / '.env'
+        load_dotenv(env_path)
+
+        setup_logging()
+        self.logger = logging.getLogger('rabids.server')
+
         self.llm_providers: dict[str, LLMProvider] = {
             'openai': OpenAIProvider(),
         }
@@ -33,19 +43,27 @@ class Server:
         )
 
     async def startup(self) -> None:
-        env_path = Path(__file__).parent.parent.parent / '.env'
-        load_dotenv(env_path)  # Load credentials from .env
+        self.logger.info('Starting Rabids server')
 
-        for provider in self.llm_providers.values():
+        for provider_name, provider in self.llm_providers.items():
+            self.logger.info(f'Initializing provider: {provider_name}')
             await provider.initialize()
 
     async def home(self, request: Request) -> JSONResponse:
         return JSONResponse({'status': 'running'})
 
     async def get_completion(self, request: Request) -> JSONResponse:
+        request_id = str(uuid.uuid4())
+        logger = self.logger.getChild('completion')
+
         try:
             data = await request.json()
             completion_request = CompletionRequest(**data)
+
+            logger.info(
+                f'Processing completion request: model={completion_request.model} '
+                f'temperature={completion_request.temperature} request_id={request_id}'
+            )
 
             provider_name = (
                 'openai'
@@ -55,6 +73,10 @@ class Server:
 
             provider = self.llm_providers.get(provider_name)
             if not provider:
+                logger.warning(
+                    f'Unsupported model provider requested: {provider_name}',
+                    extra={'request_id': request_id},
+                )
                 return JSONResponse(
                     {'error': f'Unsupported model provider: {provider_name}'},
                     status_code=400,
@@ -67,11 +89,16 @@ class Server:
                 max_tokens=completion_request.max_tokens,
             )
 
+            logger.info(
+                f'Successfully generated completion: length={len(response)} request_id={request_id}'
+            )
             return JSONResponse({'completion': response})
 
         except ValueError as e:
+            logger.warning(f'Invalid request data: {str(e)} request_id={request_id}')
             return JSONResponse({'error': str(e)}, status_code=400)
         except Exception as e:
+            logger.error(f'Internal server error: {str(e)} request_id={request_id}')
             return JSONResponse(
                 {'error': f'Internal server error: {str(e)}'},
                 status_code=500,
