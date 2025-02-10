@@ -49,6 +49,7 @@ uv pip install -e .
    - Create a `.env` file in the project root:
      ```
      OPENAI_API_KEY=your-api-key-here
+     LOG_LEVEL=INFO  # Optional: DEBUG, INFO, WARNING, ERROR, or CRITICAL
      ```
 
 ## Running the CLI Example
