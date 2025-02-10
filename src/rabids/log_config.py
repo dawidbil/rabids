@@ -37,3 +37,11 @@ def setup_logging() -> None:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(JSONFormatter())
     root_logger.addHandler(console_handler)
+
+
+def load_api_keys() -> set[str]:
+    """Load allowed API keys from environment variable."""
+    api_keys_str = os.getenv('ALLOWED_API_KEYS', '')
+    if not api_keys_str:
+        raise ValueError('ALLOWED_API_KEYS environment variable must be set')
+    return set(api_keys_str.split(','))

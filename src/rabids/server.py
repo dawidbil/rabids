@@ -5,13 +5,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from .llm.base import LLMProvider
 from .llm.providers.openai import OpenAIProvider
-from .log_config import setup_logging
+from .log_config import load_api_keys, setup_logging
 
 
 class CompletionRequest(BaseModel):
@@ -52,7 +53,19 @@ class Server:
     async def home(self, request: Request) -> JSONResponse:
         return JSONResponse({'status': 'running'})
 
+    async def verify_api_key(self, x_api_key: str | None) -> None:
+        """Verify that the API key is valid."""
+        if not x_api_key:
+            raise HTTPException(status_code=401, detail='API key is required')
+
+        allowed_keys = load_api_keys()
+        if x_api_key not in allowed_keys:
+            raise HTTPException(status_code=403, detail='Invalid API key')
+
     async def get_completion(self, request: Request) -> JSONResponse:
+        # Verify API key first
+        await self.verify_api_key(request.headers.get('x-api-key'))
+
         request_id = str(uuid.uuid4())
         logger = self.logger.getChild('completion')
 
