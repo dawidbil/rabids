@@ -129,6 +129,20 @@ Install development dependencies:
 - **Linting**: `ruff check .`
 - **Type Checking**: `mypy src`
 
+### Testing
+
+Run the test suite:
+```bash
+pytest tests/
+```
+
+Additional pytest options:
+- Run tests with output: `pytest -v tests/`
+- Run tests with print statements: `pytest -s tests/`
+- Run a specific test file: `pytest tests/test_server.py`
+- Run a specific test: `pytest tests/test_server.py::test_home_endpoint`
+- Show test coverage: `pytest --cov=src/rabids --cov-report=term-missing tests/`
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
